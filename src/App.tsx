@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import Login from './Login';
 
-const BASE = 'http://localhost:8000';
+const BASE = 'https://crud-backend-production-b12c.up.railway.app';
 
 interface Person {
   id: string;
