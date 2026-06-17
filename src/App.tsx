@@ -5,13 +5,6 @@ import Login from './Login';
 
 const BASE = process.env.REACT_APP_BACKEND_URL || '';
 
-function log(type: 'INFO' | 'ERROR' | 'WARN', message: string) {
-  const time = new Date().toISOString();
-  if (type === 'INFO') console.log(`[${time}] INFO: ${message}`);
-  if (type === 'ERROR') console.error(`[${time}] ERROR: ${message}`);
-  if (type === 'WARN') console.warn(`[${time}] WARN: ${message}`);
-}
-
 interface Person {
   id: string;
   name: string;
@@ -34,9 +27,9 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        log('INFO', `User logged in: ${firebaseUser.email}`);
+        console.log(`[INFO] User logged in: ${firebaseUser.email}`);
       } else {
-        log('INFO', 'User logged out');
+        console.log('[INFO] User logged out');
       }
       setUser(firebaseUser);
       setAuthLoading(false);
@@ -46,7 +39,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      log('INFO', `Fetching all persons for user: ${user.email}`);
+      console.log(`[INFO] Fetching all persons for user: ${user.email}`);
       fetchAll();
     }
   }, [user]);
@@ -75,15 +68,15 @@ export default function App() {
   }
 
   async function fetchAll() {
-    log('INFO', `User [${user?.email}] is fetching all persons`);
+    console.log(`[INFO] User [${user?.email}] is fetching all persons`);
     try {
       const headers = await authHeaders();
       const res = await fetch(`${BASE}/persons`, { headers });
       const data = await res.json();
       setPersons(data.data || []);
-      log('INFO', `User [${user?.email}] fetched ${data.data?.length || 0} persons`);
+      console.log(`[INFO] User [${user?.email}] fetched ${data.data?.length || 0} persons`);
     } catch (err: any) {
-      log('ERROR', `User [${user?.email}] failed to fetch persons: ${err.message}`);
+      console.error(`[ERROR] User [${user?.email}] failed to fetch persons: ${err.message}`);
       showError('Failed to load data. Make sure the backend is running.');
     }
   }
@@ -91,11 +84,11 @@ export default function App() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !age) {
-      log('WARN', `User [${user?.email}] tried to add person with missing fields`);
+      console.warn(`[WARN] User [${user?.email}] tried to add person with missing fields`);
       showError('Name and Age are required.');
       return;
     }
-    log('INFO', `User [${user?.email}] is adding person: name=${name}, age=${age}`);
+    console.log(`[INFO] User [${user?.email}] is adding person: name=${name}, age=${age}`);
     setLoading(true);
     try {
       const headers = await authHeaders();
@@ -106,13 +99,13 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
-      log('INFO', `User [${user?.email}] successfully added person: name=${name}, age=${age}`);
+      console.log(`[INFO] User [${user?.email}] successfully added person: name=${name}, age=${age}`);
       setName('');
       setAge('');
       showSuccess('Person added successfully!');
       fetchAll();
     } catch (err: any) {
-      log('ERROR', `User [${user?.email}] failed to add person: ${err.message}`);
+      console.error(`[ERROR] User [${user?.email}] failed to add person: ${err.message}`);
       showError(err.message);
     } finally {
       setLoading(false);
@@ -121,11 +114,11 @@ export default function App() {
 
   async function handleUpdate(id: string) {
     if (!editName.trim() || !editAge) {
-      log('WARN', `User [${user?.email}] tried to update person with missing fields`);
+      console.warn(`[WARN] User [${user?.email}] tried to update person with missing fields`);
       showError('Name and Age are required.');
       return;
     }
-    log('INFO', `User [${user?.email}] is updating person ID: ${id}`);
+    console.log(`[INFO] User [${user?.email}] is updating person ID: ${id}`);
     setLoading(true);
     try {
       const headers = await authHeaders();
@@ -136,12 +129,12 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
-      log('INFO', `User [${user?.email}] successfully updated person ID: ${id}`);
+      console.log(`[INFO] User [${user?.email}] successfully updated person ID: ${id}`);
       setEditId(null);
       showSuccess('Person updated successfully!');
       fetchAll();
     } catch (err: any) {
-      log('ERROR', `User [${user?.email}] failed to update person ID ${id}: ${err.message}`);
+      console.error(`[ERROR] User [${user?.email}] failed to update person ID ${id}: ${err.message}`);
       showError(err.message);
     } finally {
       setLoading(false);
@@ -150,7 +143,7 @@ export default function App() {
 
   async function handleDelete(id: string) {
     if (!window.confirm('Are you sure you want to delete?')) return;
-    log('INFO', `User [${user?.email}] is deleting person ID: ${id}`);
+    console.log(`[INFO] User [${user?.email}] is deleting person ID: ${id}`);
     setLoading(true);
     try {
       const headers = await authHeaders();
@@ -160,11 +153,11 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
-      log('INFO', `User [${user?.email}] successfully deleted person ID: ${id}`);
+      console.log(`[INFO] User [${user?.email}] successfully deleted person ID: ${id}`);
       showSuccess('Person deleted successfully!');
       fetchAll();
     } catch (err: any) {
-      log('ERROR', `User [${user?.email}] failed to delete person ID ${id}: ${err.message}`);
+      console.error(`[ERROR] User [${user?.email}] failed to delete person ID ${id}: ${err.message}`);
       showError(err.message);
     } finally {
       setLoading(false);
@@ -172,18 +165,18 @@ export default function App() {
   }
 
   function startEdit(person: Person) {
-    log('INFO', `User [${user?.email}] started editing person: ${person.name}`);
+    console.log(`[INFO] User [${user?.email}] started editing person: ${person.name}`);
     setEditId(person.id);
     setEditName(person.name);
     setEditAge(String(person.age));
   }
 
   async function handleLogout() {
-    log('INFO', `User [${user?.email}] is logging out`);
+    console.log(`[INFO] User [${user?.email}] is logging out`);
     await signOut(auth);
     setUser(null);
     setPersons([]);
-    log('INFO', 'User logged out successfully');
+    console.log('[INFO] User logged out successfully');
   }
 
   if (authLoading) {
@@ -339,7 +332,6 @@ export default function App() {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );
