@@ -5,6 +5,13 @@ import Login from './Login';
 
 const BASE = 'https://crud-backend-production-b12c.up.railway.app';
 
+function log(type: 'INFO' | 'ERROR' | 'WARN', message: string) {
+  const time = new Date().toISOString();
+  if (type === 'INFO') console.log(`[${time}] INFO: ${message}`);
+  if (type === 'ERROR') console.error(`[${time}] ERROR: ${message}`);
+  if (type === 'WARN') console.warn(`[${time}] WARN: ${message}`);
+}
+
 interface Person {
   id: string;
   name: string;
@@ -24,9 +31,13 @@ export default function App() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        log('INFO', `User logged in: ${firebaseUser.email}`);
+      } else {
+        log('INFO', 'User logged out');
+      }
       setUser(firebaseUser);
       setAuthLoading(false);
     });
@@ -34,11 +45,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user) fetchAll();
+    if (user) {
+      log('INFO', `Fetching all persons for user: ${user.email}`);
+      fetchAll();
+    }
   }, [user]);
 
-  function showSuccess(msg: string) { setSuccess(msg); setTimeout(() => setSuccess(''), 3000); }
-  function showError(msg: string) { setError(msg); setTimeout(() => setError(''), 3000); }
+  function showSuccess(msg: string) {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(''), 3000);
+  }
+
+  function showError(msg: string) {
+    setError(msg);
+    setTimeout(() => setError(''), 3000);
+  }
 
   async function getToken() {
     if (!user) return '';
@@ -47,23 +68,34 @@ export default function App() {
 
   async function authHeaders() {
     const token = await getToken();
-    return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    };
   }
 
   async function fetchAll() {
+    log('INFO', `User [${user?.email}] is fetching all persons`);
     try {
       const headers = await authHeaders();
       const res = await fetch(`${BASE}/persons`, { headers });
       const data = await res.json();
       setPersons(data.data || []);
-    } catch {
+      log('INFO', `User [${user?.email}] fetched ${data.data?.length || 0} persons`);
+    } catch (err: any) {
+      log('ERROR', `User [${user?.email}] failed to fetch persons: ${err.message}`);
       showError('Failed to load data. Make sure the backend is running.');
     }
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !age) { showError('Name and Age are required.'); return; }
+    if (!name.trim() || !age) {
+      log('WARN', `User [${user?.email}] tried to add person with missing fields`);
+      showError('Name and Age are required.');
+      return;
+    }
+    log('INFO', `User [${user?.email}] is adding person: name=${name}, age=${age}`);
     setLoading(true);
     try {
       const headers = await authHeaders();
@@ -74,15 +106,26 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
-      setName(''); setAge('');
+      log('INFO', `User [${user?.email}] successfully added person: name=${name}, age=${age}`);
+      setName('');
+      setAge('');
       showSuccess('Person added successfully!');
       fetchAll();
-    } catch (err: any) { showError(err.message); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      log('ERROR', `User [${user?.email}] failed to add person: ${err.message}`);
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleUpdate(id: string) {
-    if (!editName.trim() || !editAge) { showError('Name and Age are required.'); return; }
+    if (!editName.trim() || !editAge) {
+      log('WARN', `User [${user?.email}] tried to update person with missing fields`);
+      showError('Name and Age are required.');
+      return;
+    }
+    log('INFO', `User [${user?.email}] is updating person ID: ${id}`);
     setLoading(true);
     try {
       const headers = await authHeaders();
@@ -93,40 +136,56 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
+      log('INFO', `User [${user?.email}] successfully updated person ID: ${id}`);
       setEditId(null);
       showSuccess('Person updated successfully!');
       fetchAll();
-    } catch (err: any) { showError(err.message); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      log('ERROR', `User [${user?.email}] failed to update person ID ${id}: ${err.message}`);
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleDelete(id: string) {
     if (!window.confirm('Are you sure you want to delete?')) return;
+    log('INFO', `User [${user?.email}] is deleting person ID: ${id}`);
     setLoading(true);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${BASE}/persons/${id}`, { method: 'DELETE', headers });
+      const res = await fetch(`${BASE}/persons/${id}`, {
+        method: 'DELETE',
+        headers
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
+      log('INFO', `User [${user?.email}] successfully deleted person ID: ${id}`);
       showSuccess('Person deleted successfully!');
       fetchAll();
-    } catch (err: any) { showError(err.message); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      log('ERROR', `User [${user?.email}] failed to delete person ID ${id}: ${err.message}`);
+      showError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function startEdit(person: Person) {
+    log('INFO', `User [${user?.email}] started editing person: ${person.name}`);
     setEditId(person.id);
     setEditName(person.name);
     setEditAge(String(person.age));
   }
 
   async function handleLogout() {
+    log('INFO', `User [${user?.email}] is logging out`);
     await signOut(auth);
     setUser(null);
     setPersons([]);
+    log('INFO', 'User logged out successfully');
   }
 
-  // Show loading while checking auth
   if (authLoading) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -135,17 +194,14 @@ export default function App() {
     );
   }
 
-  // Show login page if not logged in
   if (!user) {
     return <Login onLogin={setUser} />;
   }
 
-  // Show CRUD app if logged in
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '40px 20px' }}>
       <div style={{ maxWidth: '700px', margin: '0 auto' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: 'var(--accent)', marginBottom: '4px' }}>
@@ -163,7 +219,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* Success / Error */}
         {success && (
           <div style={{ background: '#064e3b', border: '1px solid var(--success)', color: 'var(--success)', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', textAlign: 'center' }}>
             ✅ {success}
@@ -175,7 +230,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Add Person Form */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px', marginBottom: '30px' }}>
           <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text)', marginBottom: '20px' }}>➕ Add New Person</h2>
           <form onSubmit={handleCreate}>
@@ -206,7 +260,6 @@ export default function App() {
           </form>
         </div>
 
-        {/* Persons List */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '1.1rem', fontWeight: '600', color: 'var(--text)' }}>
@@ -221,7 +274,9 @@ export default function App() {
           </div>
 
           {persons.length === 0 ? (
-            <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '30px 0' }}>No persons added yet. Add one above!</p>
+            <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '30px 0' }}>
+              No persons added yet. Add one above!
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {persons.map(person => (
