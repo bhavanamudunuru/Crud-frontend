@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase';
 import Login from './Login';
 
-const BASE = 'https://crud-backend-production-b12c.up.railway.app';
+const BASE = process.env.REACT_APP_BACKEND_URL || '';
 
 function log(type: 'INFO' | 'ERROR' | 'WARN', message: string) {
   const time = new Date().toISOString();
